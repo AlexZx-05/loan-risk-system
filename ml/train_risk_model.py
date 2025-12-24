@@ -35,3 +35,15 @@ y_pred = model.predict(X_test)
 
 # Evaluate
 print(classification_report(y_test, y_pred, target_names=encoder.classes_))
+
+import pickle
+
+# Save trained model
+with open("risk_model.pkl", "wb") as f:
+    pickle.dump(model, f)
+
+# Save label encoder also
+with open("label_encoder.pkl", "wb") as f:
+    pickle.dump(encoder, f)
+
+print("Model saved successfully!")
