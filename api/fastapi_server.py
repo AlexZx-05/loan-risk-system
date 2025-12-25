@@ -4,9 +4,30 @@ import pickle
 import numpy as np
 import pandas as pd
 from fastapi import UploadFile, File
-
+from database import SessionLocal, RiskRecord
+from datetime import datetime
 
 app = FastAPI()
+
+
+# ---------- DB SAVE FUNCTION ----------
+def save_prediction(
+    borrower_id,
+    risk_level,
+    risk_score,
+    action
+):
+    db = SessionLocal()
+    record = RiskRecord(
+        borrower_id = borrower_id,
+        risk_level = risk_level,
+        risk_score = risk_score,
+        recommended_action = action,
+        timestamp = datetime.now()
+    )
+    db.add(record)
+    db.commit()
+    db.close()
 
 # Load ML model
 model = pickle.load(open("../ml/risk_model.pkl", "rb"))
@@ -23,6 +44,46 @@ class Borrower(BaseModel):
 @app.get("/")
 def home():
     return {"message": "Loan Risk AI Backend Running Successfully 🚀"}
+
+@app.post("/predict")
+def predict_risk(data: Borrower):
+
+    features = np.array([
+        data.missed_emi_count,
+        data.avg_delay_days,
+        data.max_delay_days,
+        data.emi_income_ratio
+    ]).reshape(1, -1)
+
+    risk_class = model.predict(features)[0]
+    risk_prob = model.predict_proba(features).max()
+
+    mapping = {0: "HIGH", 1: "LOW", 2: "MEDIUM"}
+    risk_label = mapping[risk_class]
+
+    if risk_label == "HIGH":
+        action = "ESCALATE_TO_OFFICER"
+    elif risk_label == "MEDIUM":
+        action = "MONITOR"
+    else:
+        action = "CONTINUE_NORMAL"
+
+    # ---- SAVE TO DB ----
+    save_prediction(
+        borrower_id = 0,        # single user → no fixed borrower
+        risk_level = risk_label,
+        risk_score = float(risk_prob),
+        action = action
+    )
+
+    return {
+        "risk_level": risk_label,
+        "risk_score": float(risk_prob),
+        "recommended_action": action,
+        "explanation": f"Predicted {risk_label} risk with confidence {round(risk_prob,2)}"
+    }
+
+
 
 
 @app.get("/predict_all")
@@ -62,6 +123,14 @@ def predict_all_borrowers():
             f"{round(risk_prob,2)} based on EMI behaviour."
         )
 
+       # ---- SAVE TO DB ----
+        save_prediction(
+            borrower_id = int(row["borrower_id"]),
+            risk_level = risk_label,
+            risk_score = float(risk_prob),
+            action = action
+        )
+
         results.append({
             "borrower_id": int(row["borrower_id"]),
             "risk_level": risk_label,
@@ -74,7 +143,6 @@ def predict_all_borrowers():
         "total_borrowers": len(results),
         "results": results
     }
-
 @app.post("/upload_predict")
 async def upload_predict(file: UploadFile = File(...)):
     df = pd.read_csv(file.file)
@@ -102,6 +170,14 @@ async def upload_predict(file: UploadFile = File(...)):
         else:
             action = "CONTINUE_NORMAL"
 
+        # ---- SAVE TO DB ----
+        save_prediction(
+            borrower_id = int(row["borrower_id"]),
+            risk_level = risk_label,
+            risk_score = float(risk_prob),
+            action = action
+        )
+
         results.append({
             "borrower_id": int(row["borrower_id"]),
             "risk_level": risk_label,
@@ -113,6 +189,7 @@ async def upload_predict(file: UploadFile = File(...)):
         "total_borrowers": len(results),
         "results": results
     }
+
 
 #-----Analytics api-----
 @app.get("/analytics")
@@ -202,4 +279,50 @@ def need_officer():
             "max_delay_days",
             "emi_income_ratio"
         ]].to_dict(orient="records")
+    }
+from database import SessionLocal
+
+@app.get("/saved_results")
+def saved_results():
+    db = SessionLocal()
+    records = db.query(RiskRecord).all()
+    db.close()
+
+    return [
+        {
+            "borrower_id": r.borrower_id,
+            "risk_level": r.risk_level,
+            "risk_score": r.risk_score,
+            "recommended_action": r.recommended_action,
+            "timestamp": r.timestamp
+        }
+        for r in records
+    ]
+
+#---------- For Risk_history -----
+@app.get("/risk_history/{borrower_id}")
+def risk_history(borrower_id: int):
+    db = SessionLocal()
+    records = (
+        db.query(RiskRecord)
+        .filter(RiskRecord.borrower_id == borrower_id)
+        .order_by(RiskRecord.timestamp)
+        .all()
+    )
+    db.close()
+
+    if not records:
+        return {"message": "No history found for this borrower"}
+
+    return {
+        "borrower_id": borrower_id,
+        "history": [
+            {
+                "risk_level": r.risk_level,
+                "risk_score": r.risk_score,
+                "action": r.recommended_action,
+                "timestamp": r.timestamp
+            }
+            for r in records
+        ]
     }
