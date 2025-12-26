@@ -6,9 +6,22 @@ import pandas as pd
 from fastapi import UploadFile, File
 from database import SessionLocal, RiskRecord
 from datetime import datetime
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi import Depends, HTTPException
+from fastapi.security import OAuth2PasswordRequestForm
+from auth import authenticate_user, create_access_token, get_current_user, require_role
+
+
 
 app = FastAPI()
 
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # ---------- DB SAVE FUNCTION ----------
 def save_prediction(
@@ -44,6 +57,22 @@ class Borrower(BaseModel):
 @app.get("/")
 def home():
     return {"message": "Loan Risk AI Backend Running Successfully 🚀"}
+
+
+@app.post("/login")
+def login(form_data: OAuth2PasswordRequestForm = Depends()):
+    user = authenticate_user(form_data.username, form_data.password)
+
+    if not user:
+        raise HTTPException(status_code=401, detail="Invalid credentials")
+
+    token = create_access_token({
+        "sub": user["username"],
+        "role": user["role"]
+    })
+
+    return {"access_token": token, "token_type": "bearer", "role": user["role"]}
+
 
 @app.post("/predict")
 def predict_risk(data: Borrower):
@@ -193,7 +222,7 @@ async def upload_predict(file: UploadFile = File(...)):
 
 #-----Analytics api-----
 @app.get("/analytics")
-def analytics():
+def analytics(user = Depends(require_role("OFFICER"))):
     df = pd.read_csv("../borrower_features_with_risk.csv")
 
     features = df[[
@@ -224,7 +253,7 @@ def analytics():
 
 #-------Top 10 High Risk Borrowers------
 @app.get("/top_risky")
-def top_risky():
+def top_risky(user = Depends(require_role("OFFICER"))):
     df = pd.read_csv("../borrower_features_with_risk.csv")
 
     features = df[[
@@ -255,7 +284,7 @@ def top_risky():
 #------/need_officer-----Only borrowers that require escalation ,Used by bank officers directly
 
 @app.get("/need_officer")
-def need_officer():
+def need_officer(user = Depends(require_role("OFFICER"))):
     df = pd.read_csv("../borrower_features_with_risk.csv")
 
     features = df[[
@@ -301,7 +330,7 @@ def saved_results():
 
 #---------- For Risk_history -----
 @app.get("/risk_history/{borrower_id}")
-def risk_history(borrower_id: int):
+def risk_history(borrower_id: int, user = Depends(require_role("OFFICER"))):
     db = SessionLocal()
     records = (
         db.query(RiskRecord)
