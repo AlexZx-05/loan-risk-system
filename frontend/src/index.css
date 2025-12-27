@@ -1,68 +1,143 @@
+/* ---------- GLOBAL THEME ---------- */
 :root {
-  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
-  line-height: 1.5;
-  font-weight: 400;
+  --bg: #f4f6fb;
+  --white: #ffffff;
 
-  color-scheme: light dark;
-  color: rgba(255, 255, 255, 0.87);
-  background-color: #242424;
+  --primary: #022449;        /* Bank Navy Blue */
+  --primary-light: #0a2f63;
+  --primary-soft: #e8f0ff;
 
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+  --text-dark: #1c1f26;
+  --text-light: #6b7280;
+
+  --border: #dcdfe6;
+  --shadow: 0 10px 25px rgba(0, 0, 0, 0.08);
+
+  --success: #22c55e;
+  --danger: #ef4444;
+  --warning: #facc15;
 }
 
-a {
-  font-weight: 500;
-  color: #646cff;
-  text-decoration: inherit;
-}
-a:hover {
-  color: #535bf2;
-}
-
-body {
+html, body {
   margin: 0;
-  display: flex;
-  place-items: center;
-  min-width: 320px;
-  min-height: 100vh;
+  padding: 0;
+  background: var(--bg);
+  color: var(--text-dark);
+  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
+  overflow-x: hidden;
 }
+
+/* ---------- TYPOGRAPHY ---------- */
 
 h1 {
-  font-size: 3.2em;
-  line-height: 1.1;
+  font-size: 2.2rem;
+  font-weight: 700;
+  margin: 0 0 10px;
 }
+
+h2 {
+  font-size: 1.6rem;
+  font-weight: 600;
+}
+
+p {
+  color: var(--text-light);
+}
+
+
+/* ---------- LINKS ---------- */
+a {
+  font-weight: 500;
+  color: var(--primary);
+  text-decoration: none;
+}
+
+a:hover {
+  color: var(--primary-light);
+}
+
+
+/* ---------- BUTTONS ---------- */
 
 button {
-  border-radius: 8px;
-  border: 1px solid transparent;
-  padding: 0.6em 1.2em;
-  font-size: 1em;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  padding: 10px 16px;
+  font-size: 0.95rem;
   font-weight: 500;
-  font-family: inherit;
-  background-color: #1a1a1a;
+  background-color: var(--primary);
+  color: white;
   cursor: pointer;
-  transition: border-color 0.25s;
-}
-button:hover {
-  border-color: #646cff;
-}
-button:focus,
-button:focus-visible {
-  outline: 4px auto -webkit-focus-ring-color;
+  transition: all 0.25s ease;
 }
 
-@media (prefers-color-scheme: light) {
-  :root {
-    color: #213547;
-    background-color: #ffffff;
-  }
-  a:hover {
-    color: #747bff;
-  }
-  button {
-    background-color: #f9f9f9;
-  }
+button:hover {
+  background: var(--primary-light);
+  transform: translateY(-1px);
+}
+
+button:focus {
+  outline: none;
+}
+
+
+/* ---------- CARD STYLE ---------- */
+.card {
+  background: var(--white);
+  padding: 20px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow);
+}
+
+
+/* ---------- TABLE POLISH ---------- */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 10px;
+  background: white;
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+th {
+  background: var(--primary);
+  color: white;
+  padding: 12px;
+}
+
+td {
+  padding: 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+tr:nth-child(even) {
+  background: #f9fbff;
+}
+
+
+/* ---------- INPUT FIELDS ---------- */
+
+input {
+  padding: 10px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  min-width: 240px;
+  outline: none;
+}
+
+input:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 5px rgba(2, 36, 73, 0.3);
+}
+
+table tr:hover {
+  background: #eef3ff !important;
+  transform: scale(1.002);
+  transition: .2s;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
 }

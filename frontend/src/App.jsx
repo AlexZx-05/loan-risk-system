@@ -1,12 +1,13 @@
 import { Routes, Route } from "react-router-dom";
-import Navbar from "./components/Navbar";
+import { useState, useEffect } from "react";
+
+import AppLayout from "./layout/AppLayout";
 import Home from "./pages/Home";
 import Analytics from "./pages/Analytics";
 import TopRisky from "./pages/TopRisky";
 import NeedOfficer from "./pages/NeedOfficer";
 import History from "./pages/History";
 import Login from "./pages/Login";
-import { useState, useEffect } from "react";
 
 export default function App() {
 
@@ -21,22 +22,25 @@ export default function App() {
     }
   }, []);
 
-  // If NOT logged in → only show login
+  // If NOT logged in → Login page only
   if (!user) {
     return <Login setUser={setUser} />;
   }
 
   return (
-    <>
-      <Navbar user={user} setUser={setUser} />
+    <Routes>
 
-      <Routes>
+      {/* All protected pages go inside layout */}
+      <Route element={<AppLayout user={user} setUser={setUser} />}>
+
         <Route path="/" element={<Home />} />
         <Route path="/analytics" element={<Analytics />} />
         <Route path="/toprisky" element={<TopRisky />} />
         <Route path="/need-officer" element={<NeedOfficer />} />
         <Route path="/history" element={<History />} />
-      </Routes>
-    </>
+
+      </Route>
+
+    </Routes>
   );
 }

@@ -11,14 +11,31 @@ export default function Navbar({ user, setUser }) {
     return (
         <nav
             style={{
-                padding: "15px",
-                background: "#0A2540",
+                position: "fixed",
+                top: 0,
+                left: 0,
+
+                width: "100%",
+                height: "70px",
+
+                background: "#022449",
                 color: "white",
+
                 display: "flex",
                 justifyContent: "space-between",
-                alignItems: "center"
+                alignItems: "center",
+
+                padding: "0 40px",
+                boxSizing: "border-box",
+
+                zIndex: 9999,
+                boxShadow: "0 4px 10px rgba(0,0,0,0.25)"
             }}
         >
+
+
+
+
             <h2>Loan Risk AI</h2>
 
             <div style={{ display: "flex", gap: "20px" }}>
