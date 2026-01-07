@@ -4,12 +4,12 @@ import pickle
 import numpy as np
 import pandas as pd
 from fastapi import UploadFile, File
-from database import SessionLocal, RiskRecord
+from .database import SessionLocal, RiskRecord
 from datetime import datetime
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi import Depends, HTTPException
 from fastapi.security import OAuth2PasswordRequestForm
-from auth import authenticate_user, create_access_token, get_current_user, require_role
+from .auth import authenticate_user, create_access_token, get_current_user, require_role
 
 
 
