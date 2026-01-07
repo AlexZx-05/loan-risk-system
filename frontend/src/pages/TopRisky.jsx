@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { BASE_URL } from "../api";
 
 export default function TopRisky() {
   const [data, setData] = useState([]);
@@ -8,7 +9,7 @@ useEffect(() => {
 
   const token = localStorage.getItem("token");
 
-  fetch("http://127.0.0.1:8000/top_risky", {
+  fetch(`${BASE_URL}/top_risky`, {
     headers: {
       "Authorization": `Bearer ${token}`
     }

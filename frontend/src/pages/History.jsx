@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { BASE_URL } from "../api";
 
 export default function History() {
   const [id, setId] = useState("");
@@ -12,29 +13,42 @@ export default function History() {
     }
 
     const token = localStorage.getItem("token");
+    const role = localStorage.getItem("role");
+
+    if (!token) {
+      alert("Session expired. Please login again.");
+      window.location.href = "/login";
+      return;
+    }
+
+    // Role protected endpoint
+    if (role !== "OFFICER") {
+      alert("Only Bank Officers can view borrower history ❌");
+      return;
+    }
 
     setLoading(true);
 
-    fetch(`http://127.0.0.1:8000/risk_history/${id}`, {
+    fetch(`${BASE_URL}/risk_history/${id}`, {
       headers: {
-        "Authorization": `Bearer ${token}`
+        Authorization: `Bearer ${token}`
       }
     })
-      .then(async res => {
-        if (res.status === 401) {
-          alert("Unauthorized - Please login again");
-          window.location.reload();
+      .then(async (res) => {
+        if (res.status === 401 || res.status === 403) {
+          alert("Unauthorized Access - Login Again ❌");
+          window.location.href = "/login";
           return;
         }
 
         return res.json();
       })
-      .then(data => {
+      .then((data) => {
         setHistory(data);
         setLoading(false);
       })
       .catch(() => {
-        alert("Backend error");
+        alert("Backend error. Please check server 🔴");
         setLoading(false);
       });
   };
@@ -56,6 +70,10 @@ export default function History() {
       </button>
 
       {loading && <h3>Loading...</h3>}
+
+      {history?.message === "No history found for this borrower" && (
+        <h3 style={{ color: "red" }}>❌ No records found</h3>
+      )}
 
       {history && history.history && (
         <div style={{ marginTop: "20px" }}>
@@ -89,10 +107,6 @@ export default function History() {
             </tbody>
           </table>
         </div>
-      )}
-
-      {history?.message === "No history found for this borrower" && (
-        <h3 style={{ color: "red" }}>No records found</h3>
       )}
     </div>
   );

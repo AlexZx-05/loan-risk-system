@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import Loader from "../components/Loader";
+import { BASE_URL } from "../api";
 
 export default function Analytics() {
 
@@ -10,7 +11,7 @@ export default function Analytics() {
 
     const token = localStorage.getItem("token");
 
-    fetch("http://127.0.0.1:8000/analytics", {
+    fetch(`${BASE_URL}/analytics`, {
       headers: {
         Authorization: `Bearer ${token}`
       }

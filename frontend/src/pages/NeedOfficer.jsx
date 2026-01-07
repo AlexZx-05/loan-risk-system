@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { BASE_URL } from "../api";
 
 export default function NeedOfficer() {
   const [cases, setCases] = useState([]);
@@ -8,7 +9,7 @@ export default function NeedOfficer() {
   useEffect(() => {
     const token = localStorage.getItem("token");
 
-    fetch("http://127.0.0.1:8000/need_officer", {
+    fetch(`${BASE_URL}/need_officer`, {
       headers: {
         "Authorization": `Bearer ${token}`
       }

@@ -1,5 +1,5 @@
 import { useState } from "react";
-
+import { BASE_URL } from "../api";
 export default function Login({ setUser }) {
 
   const [username, setUsername] = useState("");
@@ -13,7 +13,7 @@ export default function Login({ setUser }) {
     setError("");
 
     try {
-      const res = await fetch("http://127.0.0.1:8000/login", {
+      const res = await fetch(`${BASE_URL}/login`, {
         method: "POST",
         headers: {
           "Content-Type": "application/x-www-form-urlencoded"
