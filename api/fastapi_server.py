@@ -10,9 +10,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi import Depends, HTTPException
 from fastapi.security import OAuth2PasswordRequestForm
 from .auth import authenticate_user, create_access_token, get_current_user, require_role
+import os
 
-
-
+# ---------------- APP ----------------
 app = FastAPI()
 
 app.add_middleware(
@@ -23,27 +23,13 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# ---------- DB SAVE FUNCTION ----------
-def save_prediction(
-    borrower_id,
-    risk_level,
-    risk_score,
-    action
-):
-    db = SessionLocal()
-    record = RiskRecord(
-        borrower_id = borrower_id,
-        risk_level = risk_level,
-        risk_score = risk_score,
-        recommended_action = action,
-        timestamp = datetime.now()
-    )
-    db.add(record)
-    db.commit()
-    db.close()
+# ---------- SAFE PATHS (RAILWAY FIX) ----------
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+MODEL_PATH = os.path.join(BASE_DIR, "..", "ml", "risk_model.pkl")
+DATA_PATH = os.path.join(BASE_DIR, "..", "borrower_features_with_risk.csv")
 
-# Load ML model
-model = pickle.load(open("../ml/risk_model.pkl", "rb"))
+# ---------- LOAD MODEL ----------
+model = pickle.load(open(MODEL_PATH, "rb"))
 
 # ---------- INPUT FORMAT ----------
 class Borrower(BaseModel):
@@ -53,12 +39,28 @@ class Borrower(BaseModel):
     emi_income_ratio: float
 
 
+# ---------- SAVE TO DB ----------
+def save_prediction(borrower_id, risk_level, risk_score, action):
+    db = SessionLocal()
+    record = RiskRecord(
+        borrower_id=borrower_id,
+        risk_level=risk_level,
+        risk_score=risk_score,
+        recommended_action=action,
+        timestamp=datetime.now()
+    )
+    db.add(record)
+    db.commit()
+    db.close()
+
+
 # ---------- HOME ----------
 @app.get("/")
 def home():
     return {"message": "Loan Risk AI Backend Running Successfully 🚀"}
 
 
+# ---------- LOGIN ----------
 @app.post("/login")
 def login(form_data: OAuth2PasswordRequestForm = Depends()):
     user = authenticate_user(form_data.username, form_data.password)
@@ -74,9 +76,9 @@ def login(form_data: OAuth2PasswordRequestForm = Depends()):
     return {"access_token": token, "token_type": "bearer", "role": user["role"]}
 
 
+# ---------- PREDICT ----------
 @app.post("/predict")
 def predict_risk(data: Borrower):
-
     features = np.array([
         data.missed_emi_count,
         data.avg_delay_days,
@@ -97,12 +99,11 @@ def predict_risk(data: Borrower):
     else:
         action = "CONTINUE_NORMAL"
 
-    # ---- SAVE TO DB ----
     save_prediction(
-        borrower_id = 0,        # single user → no fixed borrower
-        risk_level = risk_label,
-        risk_score = float(risk_prob),
-        action = action
+        borrower_id=0,
+        risk_level=risk_label,
+        risk_score=float(risk_prob),
+        action=action
     )
 
     return {
@@ -113,72 +114,13 @@ def predict_risk(data: Borrower):
     }
 
 
-
-
+# ---------- PREDICT ALL ----------
 @app.get("/predict_all")
 def predict_all_borrowers():
-    df = pd.read_csv("../borrower_features_with_risk.csv")
-
+    df = pd.read_csv(DATA_PATH)
     results = []
 
     for _, row in df.iterrows():
-
-        # Prepare features for ML model
-        features = np.array([
-            row["missed_emi_count"],
-            row["avg_delay_days"],
-            row["max_delay_days"],
-            row["emi_income_ratio"]
-        ]).reshape(1, -1)
-
-        # Predict
-        risk_class = model.predict(features)[0]
-        risk_prob = model.predict_proba(features).max()
-
-        # SAME MAPPING AS YOUR /predict API
-        mapping = {0: "HIGH", 1: "LOW", 2: "MEDIUM"}
-        risk_label = mapping[risk_class]
-
-        # Decision logic (same style as yours)
-        if risk_label == "HIGH":
-            action = "ESCALATE_TO_OFFICER"
-        elif risk_label == "MEDIUM":
-            action = "MONITOR"
-        else:
-            action = "CONTINUE_NORMAL"
-
-        explanation = (
-            f"Predicted {risk_label} risk with confidence "
-            f"{round(risk_prob,2)} based on EMI behaviour."
-        )
-
-       # ---- SAVE TO DB ----
-        save_prediction(
-            borrower_id = int(row["borrower_id"]),
-            risk_level = risk_label,
-            risk_score = float(risk_prob),
-            action = action
-        )
-
-        results.append({
-            "borrower_id": int(row["borrower_id"]),
-            "risk_level": risk_label,
-            "risk_score": float(risk_prob),
-            "recommended_action": action,
-            "explanation": explanation
-        })
-
-    return {
-        "total_borrowers": len(results),
-        "results": results
-    }
-@app.post("/upload_predict")
-async def upload_predict(file: UploadFile = File(...)):
-    df = pd.read_csv(file.file)
-
-    results = []
-
-    for i, row in df.iterrows():
         features = np.array([
             row["missed_emi_count"],
             row["avg_delay_days"],
@@ -199,12 +141,11 @@ async def upload_predict(file: UploadFile = File(...)):
         else:
             action = "CONTINUE_NORMAL"
 
-        # ---- SAVE TO DB ----
         save_prediction(
-            borrower_id = int(row["borrower_id"]),
-            risk_level = risk_label,
-            risk_score = float(risk_prob),
-            action = action
+            borrower_id=int(row["borrower_id"]),
+            risk_level=risk_label,
+            risk_score=float(risk_prob),
+            action=action
         )
 
         results.append({
@@ -214,16 +155,13 @@ async def upload_predict(file: UploadFile = File(...)):
             "recommended_action": action
         })
 
-    return {
-        "total_borrowers": len(results),
-        "results": results
-    }
+    return {"total_borrowers": len(results), "results": results}
 
 
-#-----Analytics api-----
+# ---------- ANALYTICS ----------
 @app.get("/analytics")
-def analytics(user = Depends(require_role("OFFICER"))):
-    df = pd.read_csv("../borrower_features_with_risk.csv")
+def analytics(user=Depends(require_role("OFFICER"))):
+    df = pd.read_csv(DATA_PATH)
 
     features = df[[
         "missed_emi_count",
@@ -251,10 +189,11 @@ def analytics(user = Depends(require_role("OFFICER"))):
         "average_confidence": round(float(df["prob"].mean()), 3)
     }
 
-#-------Top 10 High Risk Borrowers------
+
+# ---------- TOP RISKY ----------
 @app.get("/top_risky")
-def top_risky(user = Depends(require_role("OFFICER"))):
-    df = pd.read_csv("../borrower_features_with_risk.csv")
+def top_risky(user=Depends(require_role("OFFICER"))):
+    df = pd.read_csv(DATA_PATH)
 
     features = df[[
         "missed_emi_count",
@@ -281,20 +220,19 @@ def top_risky(user = Depends(require_role("OFFICER"))):
         "emi_income_ratio"
     ]].to_dict(orient="records")
 
-#------/need_officer-----Only borrowers that require escalation ,Used by bank officers directly
 
+# ---------- NEED OFFICER ----------
 @app.get("/need_officer")
-def need_officer(user = Depends(require_role("OFFICER"))):
-    df = pd.read_csv("../borrower_features_with_risk.csv")
+def need_officer(user=Depends(require_role("OFFICER"))):
+    df = pd.read_csv(DATA_PATH)
 
-    features = df[[
+    preds = model.predict(df[[
         "missed_emi_count",
         "avg_delay_days",
         "max_delay_days",
         "emi_income_ratio"
-    ]]
+    ]])
 
-    preds = model.predict(features)
     mapping = {0: "HIGH", 1: "LOW", 2: "MEDIUM"}
     df["risk"] = [mapping[p] for p in preds]
 
@@ -309,8 +247,9 @@ def need_officer(user = Depends(require_role("OFFICER"))):
             "emi_income_ratio"
         ]].to_dict(orient="records")
     }
-from database import SessionLocal
 
+
+# ---------- SAVED RESULTS ----------
 @app.get("/saved_results")
 def saved_results():
     db = SessionLocal()
@@ -328,9 +267,10 @@ def saved_results():
         for r in records
     ]
 
-#---------- For Risk_history -----
+
+# ---------- RISK HISTORY ----------
 @app.get("/risk_history/{borrower_id}")
-def risk_history(borrower_id: int, user = Depends(require_role("OFFICER"))):
+def risk_history(borrower_id: int, user=Depends(require_role("OFFICER"))):
     db = SessionLocal()
     records = (
         db.query(RiskRecord)
