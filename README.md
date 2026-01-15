@@ -5,6 +5,20 @@ Frontend (Vercel): https://loan-risk-system.vercel.app
 Backend (FastAPI): https://loan-risk-system-production.up.railway.app  
 API Docs: https://loan-risk-system-production.up.railway.app/docs  
 
+
+## 🔑 Demo Login Credentials
+
+Use these accounts to test the live system:
+
+| Role     | Username | Password   |
+|---------|----------|------------|
+| Officer | officer  | officer123 |
+| Admin   | admin    | admin123   |
+
+⚠️ These are **demo accounts only** for testing purposes.
+
+---
+
 A full-stack **AI-powered Loan Risk Analysis Platform** that predicts borrower risk levels and provides **bank-grade dashboards for officers** to monitor, analyze, and take action.
 
 Built to simulate a **real financial institution risk engine**.
